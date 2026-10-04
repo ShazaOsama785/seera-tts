@@ -50,20 +50,27 @@ class XTTSEngine(TTSEngine):
     def _load_voices(self) -> None:
         import torch
 
+        # 1. Built-in speakers (always available, shipped in speakers_xtts.pth)
+        if self._model.speaker_manager is not None:
+            for name, latents in self._model.speaker_manager.speakers.items():
+                self._voices[name] = tuple(latents.values())
+
+        # 2. Your own recordings in voices/ (optional)
         for name, clips in _discover_voices(self.cfg.voices_dir).items():
             cache = self.cfg.voices_dir / f".{name}.latents.pt"
-            if cache.exists() and cache.stat().st_mtime > max(c.stat().st_mtime for c in clips):
+            newest_clip = max(c.stat().st_mtime for c in clips)
+            if cache.exists() and cache.stat().st_mtime > newest_clip:
                 self._voices[name] = tuple(torch.load(cache))
                 continue
-            gpt_latent, speaker_emb = self._model.get_conditioning_latents(
+            latents = self._model.get_conditioning_latents(
                 audio_path=[str(c) for c in clips], max_ref_length=30, sound_norm_refs=True
             )
-            torch.save((gpt_latent, speaker_emb), cache)
-            self._voices[name] = (gpt_latent, speaker_emb)
+            torch.save(latents, cache)
+            self._voices[name] = latents
 
         if not self._voices:
             raise RuntimeError(
-                f"No voices found in {self.cfg.voices_dir}. Add e.g. voices/narrator.wav "
+                f"No voices found. Add e.g. {self.cfg.voices_dir}/narrator.wav "
                 "(6-30s of clean, calm MSA storytelling)."
             )
 
@@ -82,7 +89,7 @@ class XTTSEngine(TTSEngine):
         if self._model is None:
             raise RuntimeError("Engine not loaded - call load() first.")
         if voice not in self._voices:
-            raise KeyError(f"Unknown voice {voice!r}. Available: {self.voices()}")
+            raise KeyError(f"Unknown voice {voice!r}. Some available: {self.voices()[:10]}")
 
         gpt_latent, speaker_emb = self._voices[voice]
         with self._lock, torch.inference_mode():

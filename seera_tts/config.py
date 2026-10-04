@@ -21,7 +21,8 @@ class TTSConfig:
 
     # Voices: voices/<name>.wav or voices/<name>/*.wav (several clips = more stable voice)
     voices_dir: Path = Path("./voices")
-    default_voice: str = "narrator"
+    default_voice: str = "Dionisio Schuyler"   # built-in; switch to "narrator" when the recording is ready
+
 
     # Generation (lower temperature = steadier, calmer narration)
     temperature: float = 0.65
