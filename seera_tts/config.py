@@ -33,7 +33,7 @@ class TTSConfig:
 
     # Text processing
     max_segment_chars: int = 85  # XTTS's Arabic limit is 166; tashkeel ~doubles length
-    diacritizer: str = "mishkal"  # "none" | "mishkal"
+    diacritizer: str = "none"  # "none" | "mishkal"
     lexicon_path: Path = _PACKAGE_DIR / "data" / "lexicon.json"    # Text processing
     
 
