@@ -9,6 +9,10 @@ import re
 from pathlib import Path
 from typing import Callable
 
+
+import logging
+
+logger = logging.getLogger(__name__)
 # Proclitics that may be glued to a name: و، ف، ب، ل، ك
 _PREFIX = r"(?P<prefix>[وفبلك]?)"
 _PLACEHOLDER_BASE = 0xE000  # Unicode private-use area, ignored by diacritizers
@@ -60,3 +64,14 @@ class PronunciationLexicon:
             return t
 
         return protected, restore
+
+    @classmethod
+    def from_json(cls, path: Path) -> "PronunciationLexicon":
+        if not path.exists():
+            logger.warning("No lexicon at %s - using an empty lexicon.", path)
+            return cls({})
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))  # -sig also accepts a BOM
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
+        return cls(data)

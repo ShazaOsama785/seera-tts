@@ -70,3 +70,8 @@ def test_engines_import_without_torch():
     with pytest.raises(ValueError):
         build_engine("unknown", None)
 
+def test_real_lexicon_file_is_valid():
+    from seera_tts.config import TTSConfig
+    lexicon = PronunciationLexicon.from_json(TTSConfig().lexicon_path)
+    assert len(lexicon) > 0
+
