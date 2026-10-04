@@ -32,7 +32,7 @@ class TTSConfig:
     stream_chunk_size: int = 20  # smaller = lower first-audio latency, more overhead
 
     # Text processing
-    max_segment_chars: int = 150  # XTTS's Arabic limit is 166; tashkeel ~doubles length
+    max_segment_chars: int = 150 # XTTS's Arabic limit is 166; tashkeel ~doubles length
     diacritizer: str = "none"  # "none" | "mishkal"
     lexicon_path: Path = _PACKAGE_DIR / "data" / "lexicon.json"    # Text processing
     
