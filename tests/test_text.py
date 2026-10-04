@@ -64,3 +64,9 @@ def test_preparer_quran_is_untouched():
     assert quran.kind == "quran"
     assert quran.display_text == quran.spoken_text == "﴿إلا تنصروه﴾"
 
+def test_engines_import_without_torch():
+    from seera_tts.engines import TTSEngine, build_engine  # must not crash locally
+    import pytest
+    with pytest.raises(ValueError):
+        build_engine("unknown", None)
+
