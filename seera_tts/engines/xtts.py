@@ -41,7 +41,10 @@ class XTTSEngine(TTSEngine):
         device = self.cfg.device if torch.cuda.is_available() else "cpu"
         if device != self.cfg.device:
             logger.warning("CUDA not available - running on CPU (not real-time).")
-        self._model = model.to(device).eval()
+        model.to(device)
+        model.eval()
+        self._model = model
+
 
         self._load_voices()
         self._warmup()
