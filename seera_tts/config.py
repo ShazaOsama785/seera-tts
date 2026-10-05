@@ -35,6 +35,11 @@ class TTSConfig:
     max_segment_chars: int = 150 # XTTS's Arabic limit is 166; tashkeel ~doubles length
     diacritizer: str = "none"  # "none" | "mishkal"
     lexicon_path: Path = _PACKAGE_DIR / "data" / "lexicon.json"    # Text processing
+
+    # Quran recitation (human reciters, streamed by the client from the source)
+    quran_audio_base: str = "https://everyayah.com/data"
+    quran_reciter: str = "Alafasy_128kbps"
+    quran_text_path: Path = _PACKAGE_DIR / "data" / "quran-simple-clean.txt"  # from tanzil.net
     
 
     # Audio

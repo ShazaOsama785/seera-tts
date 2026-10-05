@@ -7,19 +7,31 @@ sentence 1 plays while the LLM is still writing sentence 3.
 
 from __future__ import annotations
 
+import logging
 import re
+from dataclasses import dataclass
 from typing import Literal
 
+from .quran import surah_number
+
+logger = logging.getLogger(__name__)
+
 _TERMINATORS = frozenset(".!؟?…؛\n")
-_QURAN_OPEN, _QURAN_CLOSE = "﴿", "﴾"
-_QURAN_SPAN = re.compile(r"﴿[^﴾]*﴾")
+_QURAN_OPEN, _QURAN_CLOSE = "﴿{", "﴾}"  # sources use ﴿...﴾ or {...} for verses
+# Verse + optional reference:  { ... } [ العلق: 1: 3 ]  /  [العلق: 1-3]  /  [96: 1]
+_QURAN_SPAN = re.compile(
+    r"(?P<verse>[﴿{][^﴾}]*[﴾}])"
+    r"(?:\s*\[\s*(?P<surah>[^\]:]+?)\s*:\s*(?P<start>\d{1,3})"
+    r"(?:\s*[:\-–]\s*(?P<end>\d{1,3}))?\s*\])?"
+)
+_HAS_WORD = re.compile(r"\w")  # skip leftovers like ")،"
 _CLAUSE_BREAK = re.compile(r"(?<=[،,:])\s+")
 
 SegmentKind = Literal["speech", "quran"]
 
 
 class SentenceStream:
-    """Incremental sentence splitter. Never splits inside ﴿...﴾ or a decimal like 12.5."""
+    """Incremental sentence splitter. Never splits inside a verse or a decimal like 12.5."""
 
     def __init__(self) -> None:
         self._buffer = ""
@@ -30,9 +42,9 @@ class SentenceStream:
 
         while i < len(buf):
             ch = buf[i]
-            if ch == _QURAN_OPEN:
+            if ch in _QURAN_OPEN:
                 depth += 1
-            elif ch == _QURAN_CLOSE:
+            elif ch in _QURAN_CLOSE:
                 depth = max(0, depth - 1)
             elif ch in _TERMINATORS and depth == 0:
                 if ch == "." and i > 0 and buf[i - 1].isdigit():
@@ -63,18 +75,40 @@ def split_sentences(text: str) -> list[str]:
     return stream.feed(text) + stream.flush()
 
 
-def split_quran(sentence: str) -> list[tuple[SegmentKind, str]]:
-    """Separate Quranic text (inside ﴿ ﴾) from narration so it is never machine-voiced."""
-    pieces: list[tuple[SegmentKind, str]] = []
+@dataclass(frozen=True)
+class QuranRef:
+    surah: int
+    start: int
+    end: int
+
+    def ayahs(self) -> list[tuple[int, int]]:
+        return [(self.surah, a) for a in range(self.start, self.end + 1)]
+
+
+def split_quran(sentence: str) -> list[tuple[SegmentKind, str, QuranRef | None]]:
+    """Separate Quranic text from narration so it is never machine-voiced."""
+    pieces: list[tuple[SegmentKind, str, QuranRef | None]] = []
     pos = 0
-    for match in _QURAN_SPAN.finditer(sentence):
-        if before := sentence[pos : match.start()].strip():
-            pieces.append(("speech", before))
-        pieces.append(("quran", match.group()))
-        pos = match.end()
-    if tail := sentence[pos:].strip(" ."):
-        pieces.append(("speech", sentence[pos:].strip()))
+    for m in _QURAN_SPAN.finditer(sentence):
+        if _HAS_WORD.search(before := sentence[pos : m.start()].strip()):
+            pieces.append(("speech", before, None))
+        pieces.append(("quran", m["verse"], _parse_ref(m)))
+        pos = m.end()
+    if _HAS_WORD.search(tail := sentence[pos:].strip()):
+        pieces.append(("speech", tail, None))
     return pieces
+
+
+def _parse_ref(m: re.Match[str]) -> QuranRef | None:
+    if not m["surah"]:
+        return None
+    surah = surah_number(m["surah"])
+    if surah is None:
+        logger.warning("Unknown surah name %r - verse will be shown without audio", m["surah"])
+        return None
+    start = int(m["start"])
+    end = int(m["end"]) if m["end"] else start
+    return QuranRef(surah, start, end) if end >= start else None
 
 
 def split_long(text: str, max_chars: int) -> list[str]:

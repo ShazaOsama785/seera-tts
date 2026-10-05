@@ -3,8 +3,8 @@ from seera_tts.config import TTSConfig
 
 def test_defaults():
     cfg = TTSConfig()
-    assert cfg.diacritizer == "mishkal"
-    assert cfg.max_segment_chars == 85
+    assert cfg.diacritizer == "none"
+    assert cfg.max_segment_chars == 150
 
 
 def test_env_overrides(monkeypatch):

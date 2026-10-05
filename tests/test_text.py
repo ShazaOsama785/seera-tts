@@ -75,3 +75,6 @@ def test_real_lexicon_file_is_valid():
     lexicon = PronunciationLexicon.from_json(TTSConfig().lexicon_path)
     assert len(lexicon) > 0
 
+def test_normalize_parentheses_rules_still_work():
+    assert normalize("قال (ص) كذا (ج2، ص45) «وانتهى»") == "قال صلى الله عليه وسلم كذا وانتهى"
+

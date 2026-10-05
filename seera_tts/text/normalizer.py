@@ -25,6 +25,9 @@ _REMOVALS: list[re.Pattern[str]] = [
     re.compile(r"[*_#`>|]+"),  # markdown leftovers from the LLM
 ]
 
+# Bracket and quote characters - removed last, after the rules above that need them.
+_BRACKETS = re.compile(r"[{}﴿﴾()«»\"]")
+
 _TATWEEL = "\u0640"
 
 
@@ -34,6 +37,8 @@ def normalize(text: str) -> str:
         text = pattern.sub(" ", text)
     for pattern, replacement in _EXPANSIONS:  # before tatweel removal: "هـ" relies on it
         text = pattern.sub(replacement, text)
+    text = _BRACKETS.sub(" ", text)
     text = text.replace(_TATWEEL, "")
     text = re.sub(r"\s+([،,.؛:!؟?])", r"\1", text)  # no space before punctuation
+    text = re.sub(r"^[\s،,.؛:!؟?]+", "", text)  # no punctuation at the start
     return re.sub(r"\s+", " ", text).strip()
